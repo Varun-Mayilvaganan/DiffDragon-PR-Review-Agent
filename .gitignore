@@ -1,0 +1,53 @@
+# --- Python ---
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
+.eggs/
+
+# --- Virtual environments ---
+.venv/
+venv/
+ENV/
+env/
+*.env
+
+# --- Jupyter / Notebooks ---
+.ipynb_checkpoints
+
+# --- IDEs / Editors ---
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# --- OS files ---
+.DS_Store
+Thumbs.db
+
+# --- Logs ---
+*.log
+
+# --- Secrets ---
+*.secret
+*.pem
+*.key
+
+# --- Cache ---
+.cache/
+.mypy_cache/
+pytest_cache/
+coverage/
+
+# --- Local test outputs ---
+*.out
+*.tmp
+
+# --- GitHub Actions runner files ---
+# (They won’t usually appear, but good to be safe)
+.github/workflows/*.local.yml
