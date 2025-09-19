@@ -1,53 +1,104 @@
-# --- Python ---
+# Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
-*.pyo
-*.pyd
-*.so
-*.egg
-*.egg-info/
-dist/
-build/
-.eggs/
+*$py.class
 
-# --- Virtual environments ---
+# C extensions
+*.so
+
+# Virtual environments
 .venv/
 venv/
-ENV/
 env/
-*.env
+ENV/
+.venv*/
+pip-wheel-metadata/
 
-# --- Jupyter / Notebooks ---
-.ipynb_checkpoints
+# Distribution / packaging
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+*.egg-info/
+.installed.cfg
+*.egg
 
-# --- IDEs / Editors ---
+# PyInstaller
+*.manifest
+*.spec
+
+# Installer logs
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Unit test / coverage reports
+htmlcov/
+.tox/
+.nox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.py,cover
+.hypothesis/
+.pytest_cache/
+
+# IDEs and editors
 .vscode/
 .idea/
-*.swp
-*.swo
+*.sublime-project
+*.sublime-workspace
 
-# --- OS files ---
+# Jupyter Notebook checkpoints
+.ipynb_checkpoints
+
+# Environment variables
+.env
+*.env
+.env.*
+
+# Logs
+*.log
+logs/
+log/
+
+# Database files
+*.sqlite3
+*.db
+
+# FastAPI / Uvicorn specific
+*.pid
+*.sock
+
+# Docker
+docker-compose.override.yml
+.docker/
+*.pid
+
+# mypy
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# Pyre type checker
+.pyre/
+
+# pytype static type analyzer
+.pytype/
+
+# VS Code local settings
+.vscode/
+
+# OS specific
 .DS_Store
 Thumbs.db
-
-# --- Logs ---
-*.log
-
-# --- Secrets ---
-*.secret
-*.pem
-*.key
-
-# --- Cache ---
-.cache/
-.mypy_cache/
-pytest_cache/
-coverage/
-
-# --- Local test outputs ---
-*.out
-*.tmp
-
-# --- GitHub Actions runner files ---
-# (They won’t usually appear, but good to be safe)
-.github/workflows/*.local.yml
