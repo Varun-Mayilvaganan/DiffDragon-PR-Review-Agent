@@ -20,7 +20,7 @@ jobs:
           fetch-depth: 0  # Fetch full history for better context
           
       - name: Setup Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5   # 🔄 bump to v5
         with:
           python-version: "3.11"
           cache: 'pip'
@@ -51,7 +51,7 @@ jobs:
           
       - name: Upload review artifacts
         if: always()
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4   # ✅ fixed
         with:
           name: pr-review-results
           path: |
