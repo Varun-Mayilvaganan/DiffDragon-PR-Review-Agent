@@ -2,7 +2,7 @@ import os
 
 def main():
     """Simple test function."""
-    print('hello world')
+    print('Varun is a good boy')
     return True
 
 if __name__ == "__main__":
