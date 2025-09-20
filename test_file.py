@@ -1,1 +1,1 @@
-print('hello world')
+import os\nprint('hello world')

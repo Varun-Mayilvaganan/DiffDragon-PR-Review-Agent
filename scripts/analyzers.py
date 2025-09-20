@@ -2,19 +2,17 @@ import json
 import logging
 import subprocess
 from typing import Any, Dict, List
-import os
-import sys
-sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
+
 from config import Settings
 
 
 def _run_tool(cmd: List[str]) -> subprocess.CompletedProcess:
-
+    """Run a command and return the result."""
     return subprocess.run(cmd, capture_output=True, text=True, check=False)
 
 
 def run_static_analyzers(files: List[str], settings: Settings) -> Dict[str, Any]:
-
+    """Run static analysis tools on the provided files."""
     results: Dict[str, Any] = {
         "flake8": {},
         "pylint": {},
@@ -27,88 +25,160 @@ def run_static_analyzers(files: List[str], settings: Settings) -> Dict[str, Any]
     if not files:
         return results
 
+    # Only analyze Python files for Python tools
+    python_files = [f for f in files if f.endswith('.py')]
+    
+    if not python_files:
+        logging.info("No Python files to analyze")
+        return results
+
     # flake8
-    flake = _run_tool(["flake8", "--format=json", *files])
-    if flake.stdout:
-        try:
-            results["flake8"] = json.loads(flake.stdout)
-        except json.JSONDecodeError:
-            results["flake8"] = {"raw": flake.stdout}
+    try:
+        flake = _run_tool(["flake8", "--format=json", *python_files])
+        if flake.stdout:
+            try:
+                results["flake8"] = json.loads(flake.stdout)
+            except json.JSONDecodeError:
+                results["flake8"] = {"raw": flake.stdout}
+    except Exception as e:
+        logging.warning(f"Flake8 failed: {e}")
+        results["flake8"] = {"error": str(e)}
 
     # pylint
-    pylint = _run_tool(["pylint", "-f", "json", *files])
     try:
-        results["pylint"] = json.loads(pylint.stdout or "[]")
-    except json.JSONDecodeError:
-        results["pylint"] = {"raw": pylint.stdout}
+        pylint = _run_tool(["pylint", "-f", "json", *python_files])
+        try:
+            results["pylint"] = json.loads(pylint.stdout or "[]")
+        except json.JSONDecodeError:
+            results["pylint"] = {"raw": pylint.stdout}
+    except Exception as e:
+        logging.warning(f"Pylint failed: {e}")
+        results["pylint"] = {"error": str(e)}
 
     # bandit
-    bandit = _run_tool(["bandit", "-f", "json", "-q", "-r", *files])
     try:
-        results["bandit"] = json.loads(bandit.stdout or "{}")
-    except json.JSONDecodeError:
-        results["bandit"] = {"raw": bandit.stdout}
+        bandit = _run_tool(["bandit", "-f", "json", "-q", "-r"] + python_files)
+        try:
+            results["bandit"] = json.loads(bandit.stdout or "{}")
+        except json.JSONDecodeError:
+            results["bandit"] = {"raw": bandit.stdout}
+    except Exception as e:
+        logging.warning(f"Bandit failed: {e}")
+        results["bandit"] = {"error": str(e)}
 
     # mypy
-    mypy = _run_tool(["mypy", "--no-error-summary", "--hide-error-context", "--pretty", *files])
-    results["mypy"] = {"stdout": mypy.stdout, "stderr": mypy.stderr, "code": mypy.returncode}
+    try:
+        mypy = _run_tool(["mypy", "--no-error-summary", "--hide-error-context", "--pretty"] + python_files)
+        results["mypy"] = {"stdout": mypy.stdout, "stderr": mypy.stderr, "code": mypy.returncode}
+    except Exception as e:
+        logging.warning(f"MyPy failed: {e}")
+        results["mypy"] = {"error": str(e)}
 
     # black (check)
-    black = _run_tool(["black", "--check", "--diff", *files])
-    results["black"] = {"stdout": black.stdout, "stderr": black.stderr, "code": black.returncode}
+    try:
+        black = _run_tool(["black", "--check", "--diff"] + python_files)
+        results["black"] = {"stdout": black.stdout, "stderr": black.stderr, "code": black.returncode}
+    except Exception as e:
+        logging.warning(f"Black failed: {e}")
+        results["black"] = {"error": str(e)}
 
     # isort (check)
-    isort = _run_tool(["isort", "--check-only", "--diff", *files])
-    results["isort"] = {"stdout": isort.stdout, "stderr": isort.stderr, "code": isort.returncode}
+    try:
+        isort = _run_tool(["isort", "--check-only", "--diff"] + python_files)
+        results["isort"] = {"stdout": isort.stdout, "stderr": isort.stderr, "code": isort.returncode}
+    except Exception as e:
+        logging.warning(f"isort failed: {e}")
+        results["isort"] = {"error": str(e)}
 
     return results
 
 
 def _get_diffs(files: List[str]) -> Dict[str, str]:
-
+    """Get git diffs for the specified files."""
     diffs: Dict[str, str] = {}
     for path in files:
-        proc = subprocess.run(["git", "diff", "-U3", "HEAD^", "--", path], capture_output=True, text=True, check=False)
-        diffs[path] = proc.stdout
+        try:
+            proc = subprocess.run(
+                ["git", "diff", "-U3", "HEAD^", "--", path], 
+                capture_output=True, 
+                text=True, 
+                check=False
+            )
+            diffs[path] = proc.stdout
+        except Exception as e:
+            logging.warning(f"Failed to get diff for {path}: {e}")
+            diffs[path] = f"Error getting diff: {e}"
     return diffs
 
 
 def run_llm_review(files: List[str], settings: Settings) -> Dict[str, Any]:
-
+    """Run LLM-based code review using Gemini."""
     if not files or not settings.gemini_api_key:
         return {"findings": [], "summary": "LLM disabled or no files."}
 
     try:
-        from langchain_google_genai import ChatGoogleGenerativeAI
-        from langchain_core.prompts import ChatPromptTemplate
-    except Exception as exc:  # noqa: BLE001
-        logging.warning("LLM libraries not available: %s", exc)
+        import google.generativeai as genai
+    except ImportError:
+        logging.warning("Google Generative AI library not available")
         return {"findings": [], "summary": "LLM libraries missing."}
 
-    diffs = _get_diffs(files)
-
-    system_prompt = (
-        "You are an experienced code reviewer. Analyze the provided unified diffs and"
-        " return JSON with issues. For each issue provide: severity (high|medium|low),"
-        " file, line (best guess), title, and recommendation."
-    )
-
-    prompt = ChatPromptTemplate.from_messages(
-        [
-            ("system", system_prompt),
-            ("human", "Repository: {repo}, PR: {pr}\nDiffs JSON: {diffs}"),
-        ]
-    )
-
-    llm = ChatGoogleGenerativeAI(model="gemini-1.5-flash", api_key=settings.gemini_api_key, temperature=0)
-    chain = prompt | llm
-    response = chain.invoke({"repo": settings.repository, "pr": settings.pr_number, "diffs": json.dumps(diffs)})
-
-    text = getattr(response, "content", "") or str(response)
     try:
-        data = json.loads(text)
-    except json.JSONDecodeError:
-        data = {"raw": text}
-    return data
+        genai.configure(api_key=settings.gemini_api_key)
+        model = genai.GenerativeModel('gemini-1.5-flash')
 
+        diffs = _get_diffs(files)
+        
+        if not any(diffs.values()):
+            return {"findings": [], "summary": "No diffs to review"}
 
+        system_prompt = """You are an experienced code reviewer. Analyze the provided git diffs and identify potential issues.
+
+Return your response as a JSON object with this exact structure:
+{
+  "findings": [
+    {
+      "severity": "high|medium|low|info",
+      "file": "filename",
+      "line": "line_number_or_range",
+      "title": "Brief issue description",
+      "recommendation": "Suggested fix or improvement"
+    }
+  ],
+  "summary": "Overall summary of the review"
+}
+
+Focus on:
+- Security vulnerabilities
+- Performance issues
+- Code quality problems
+- Logic errors
+- Best practice violations
+
+Be concise but helpful in your recommendations."""
+
+        user_prompt = f"""Repository: {settings.repository}
+PR: #{settings.pr_number}
+
+Diffs to review:
+{json.dumps(diffs, indent=2)}"""
+
+        response = model.generate_content(f"{system_prompt}\n\n{user_prompt}")
+        
+        try:
+            # Clean up the response text
+            text = response.text.strip()
+            if text.startswith('```json'):
+                text = text[7:]
+            if text.endswith('```'):
+                text = text[:-3]
+            text = text.strip()
+            
+            data = json.loads(text)
+            return data
+        except json.JSONDecodeError:
+            logging.warning("Failed to parse LLM response as JSON")
+            return {"findings": [], "summary": f"Raw LLM response: {response.text}"}
+
+    except Exception as e:
+        logging.error(f"LLM review failed: {e}")
+        return {"findings": [], "summary": f"LLM review failed: {e}"}

@@ -17,10 +17,10 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0  # Fetch full history for better context
+          fetch-depth: 0
           
       - name: Setup Python
-        uses: actions/setup-python@v5   # 🔄 bump to v5
+        uses: actions/setup-python@v5
         with:
           python-version: "3.11"
           cache: 'pip'
@@ -40,7 +40,7 @@ jobs:
           pip install flake8 pylint bandit black isort mypy safety
           
       - name: Run AI PR Review
-        run: python scripts/main.py
+        run: python -m scripts.main
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
@@ -51,7 +51,7 @@ jobs:
           
       - name: Upload review artifacts
         if: always()
-        uses: actions/upload-artifact@v4   # ✅ fixed
+        uses: actions/upload-artifact@v4
         with:
           name: pr-review-results
           path: |
