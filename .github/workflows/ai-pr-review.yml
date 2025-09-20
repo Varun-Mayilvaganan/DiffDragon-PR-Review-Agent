@@ -48,6 +48,9 @@ jobs:
           PR_NUMBER: ${{ github.event.pull_request.number }}
           GITHUB_SHA: ${{ github.sha }}
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          ENABLE_LLM_REVIEW: "true"
+          ENABLE_STATIC_ANALYSIS: "true"
+          MAX_FILES_TO_REVIEW: "20"
           
       - name: Upload review artifacts
         if: always()

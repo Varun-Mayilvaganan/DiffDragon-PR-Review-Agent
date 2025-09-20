@@ -24,10 +24,14 @@ def _filter_files(files: List[str], settings: Settings) -> List[str]:
             
         # Check if file exists and is readable
         try:
-            with open(path, 'r', encoding='utf-8'):
-                pass
-        except (FileNotFoundError, PermissionError, UnicodeDecodeError):
-            logging.debug(f"Skipping {path} - file not readable")
+            with open(path, 'r', encoding='utf-8') as f:
+                content = f.read()
+                # Skip files that are too large or binary
+                if len(content) > 100000:  # Skip files larger than 100KB
+                    logging.debug(f"Skipping {path} - too large")
+                    continue
+        except (FileNotFoundError, PermissionError, UnicodeDecodeError) as e:
+            logging.debug(f"Skipping {path} - not readable: {e}")
             continue
             
         # Include only specified extensions (if any)

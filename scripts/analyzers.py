@@ -34,23 +34,45 @@ def run_static_analyzers(files: List[str], settings: Settings) -> Dict[str, Any]
 
     # flake8
     try:
-        flake = _run_tool(["flake8", "--format=json", *python_files])
+        flake = _run_tool(["flake8", "--format=default", *python_files])
         if flake.stdout:
-            try:
-                results["flake8"] = json.loads(flake.stdout)
-            except json.JSONDecodeError:
-                results["flake8"] = {"raw": flake.stdout}
+            # Parse flake8 output manually since JSON format might not work consistently
+            lines = [line.strip() for line in flake.stdout.splitlines() if line.strip()]
+            flake8_issues = []
+            for line in lines:
+                if ':' in line:
+                    parts = line.split(':', 3)
+                    if len(parts) >= 4:
+                        flake8_issues.append({
+                            'file': parts[0],
+                            'line': parts[1],
+                            'column': parts[2],
+                            'message': parts[3].strip()
+                        })
+            results["flake8"] = flake8_issues
+        else:
+            results["flake8"] = []
     except Exception as e:
         logging.warning(f"Flake8 failed: {e}")
         results["flake8"] = {"error": str(e)}
 
     # pylint
     try:
-        pylint = _run_tool(["pylint", "-f", "json", *python_files])
+        pylint = _run_tool(["pylint", "--output-format=json", "--disable=all", "--enable=error,warning,convention,refactor", *python_files])
         try:
-            results["pylint"] = json.loads(pylint.stdout or "[]")
+            pylint_data = json.loads(pylint.stdout or "[]")
+            # Filter to only show important issues
+            important_issues = []
+            for issue in pylint_data:
+                if isinstance(issue, dict):
+                    msg_type = issue.get('type', '')
+                    if msg_type in ['error', 'warning'] or (msg_type in ['convention', 'refactor'] and len(important_issues) < 5):
+                        important_issues.append(issue)
+            results["pylint"] = important_issues[:10]  # Limit to 10 most important
         except json.JSONDecodeError:
-            results["pylint"] = {"raw": pylint.stdout}
+            # Fallback to text output
+            pylint_text = _run_tool(["pylint", "--disable=all", "--enable=error,warning", *python_files])
+            results["pylint"] = {"raw": pylint_text.stdout[:500] if pylint_text.stdout else "No issues"}
     except Exception as e:
         logging.warning(f"Pylint failed: {e}")
         results["pylint"] = {"error": str(e)}

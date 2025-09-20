@@ -73,33 +73,44 @@ def _compose_body(lint_results: Dict[str, Any], ai_review: Dict[str, Any], chang
                 
             lines.append(f"\n**{tool.upper()}**:")
             
-            if tool == "flake8" and isinstance(result, (list, dict)):
+            if tool == "flake8":
                 if isinstance(result, list) and result:
                     lines.append(f"- Found {len(result)} issues")
-                    for issue in result[:3]:  # Show first 3 issues
+                    for issue in result[:5]:  # Show first 5 issues
                         if isinstance(issue, dict):
-                            lines.append(f"  - Line {issue.get('line_number', '?')}: {issue.get('text', 'Issue')}")
+                            file_name = issue.get('file', '').replace('./', '')
+                            line_num = issue.get('line', '?')
+                            message = issue.get('message', 'Issue')
+                            lines.append(f"  - `{file_name}:{line_num}` - {message}")
                         else:
                             lines.append(f"  - {str(issue)}")
-                    if len(result) > 3:
-                        lines.append(f"  - ... and {len(result) - 3} more issues")
+                    if len(result) > 5:
+                        lines.append(f"  - ... and {len(result) - 5} more issues")
                 elif isinstance(result, dict) and result.get("raw"):
-                    lines.append(f"- Issues found:\n```\n{result['raw'][:200]}...\n```")
+                    lines.append(f"- Issues found:\n```\n{result['raw'][:300]}...\n```")
+                elif isinstance(result, dict) and result.get("error"):
+                    lines.append(f"- ⚠️ Tool failed: {result['error']}")
                 else:
                     lines.append("- ✅ No issues found")
             
-            elif tool == "pylint" and isinstance(result, (list, dict)):
+            elif tool == "pylint":
                 if isinstance(result, list) and result:
                     lines.append(f"- Found {len(result)} issues")
-                    for issue in result[:3]:
+                    for issue in result[:5]:
                         if isinstance(issue, dict):
-                            lines.append(f"  - {issue.get('message', 'Issue')} ({issue.get('type', 'unknown')})")
+                            file_name = issue.get('path', '').replace('./', '')
+                            line_num = issue.get('line', '?')
+                            message = issue.get('message', 'Issue')
+                            issue_type = issue.get('type', 'unknown')
+                            lines.append(f"  - `{file_name}:{line_num}` - {message} ({issue_type})")
                         else:
                             lines.append(f"  - {str(issue)}")
-                    if len(result) > 3:
-                        lines.append(f"  - ... and {len(result) - 3} more issues")
+                    if len(result) > 5:
+                        lines.append(f"  - ... and {len(result) - 5} more issues")
                 elif isinstance(result, dict) and result.get("raw"):
-                    lines.append(f"- Issues found:\n```\n{result['raw'][:200]}...\n```")
+                    lines.append(f"- Issues found:\n```\n{result['raw'][:300]}...\n```")
+                elif isinstance(result, dict) and result.get("error"):
+                    lines.append(f"- ⚠️ Tool failed: {result['error']}")
                 else:
                     lines.append("- ✅ No issues found")
             
