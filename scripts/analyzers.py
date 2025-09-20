@@ -2,7 +2,9 @@ import json
 import logging
 import subprocess
 from typing import Any, Dict, List
-
+import os
+import sys
+sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 from .config import Settings
 
 
@@ -78,7 +80,7 @@ def run_llm_review(files: List[str], settings: Settings) -> Dict[str, Any]:
 
     try:
         from langchain_google_genai import ChatGoogleGenerativeAI
-        from langchain.prompts import ChatPromptTemplate
+        from langchain_core.prompts import ChatPromptTemplate
     except Exception as exc:  # noqa: BLE001
         logging.warning("LLM libraries not available: %s", exc)
         return {"findings": [], "summary": "LLM libraries missing."}

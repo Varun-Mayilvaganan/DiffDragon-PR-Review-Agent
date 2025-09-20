@@ -1,8 +1,9 @@
 import logging
 from typing import Any, Dict, List
-
+import os
+import sys
 from github import Github
-
+sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 from .config import Settings
 
 

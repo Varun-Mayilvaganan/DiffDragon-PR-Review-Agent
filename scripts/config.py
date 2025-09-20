@@ -17,13 +17,17 @@ def _split_csv(value: str, default: List[str]) -> List[str]:
 
 @dataclass(frozen=True)
 class Settings:
+    # Required - only these two are needed for basic usage
     github_token: str = os.getenv("GITHUB_TOKEN", "")
     gemini_api_key: str = os.getenv("GEMINI_API_KEY", "")
+    
+    # Auto-set by GitHub Actions (you don't need to set these)
     repository: str = os.getenv("GITHUB_REPOSITORY", "")
     pr_number: int = int(os.getenv("PR_NUMBER", "0") or 0)
     head_sha: str = os.getenv("GITHUB_SHA", "")
     base_sha: str = os.getenv("BASE_SHA", "")
 
+    # Optional - all have sensible defaults
     max_files_to_review: int = int(os.getenv("MAX_FILES_TO_REVIEW", "50"))
     enable_llm_review: bool = os.getenv("ENABLE_LLM_REVIEW", "true").lower() == "true"
     enable_static_analysis: bool = os.getenv("ENABLE_STATIC_ANALYSIS", "true").lower() == "true"

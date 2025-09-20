@@ -1,7 +1,9 @@
 import logging
 import subprocess
 from typing import List
-
+import os
+import sys
+sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 from .config import Settings
 
 
