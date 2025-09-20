@@ -20,7 +20,8 @@ isort==5.13.2
 markdown-it-py==4.0.0
 mccabe==0.7.0
 mdurl==0.1.2
-openai==1.35.0
+langchain==0.3.7
+langchain-google-genai==2.0.5
 platformdirs==4.4.0
 pycodestyle==2.12.1
 pycparser==2.22

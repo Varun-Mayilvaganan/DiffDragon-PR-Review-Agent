@@ -1,28 +1,79 @@
+import json
+import logging
+import os
 import sys
-from fetch_pr import fetch_pr_diff
-from run_analyzer import run_linting
-from llm_review import review_with_llm
-from post_review import post_review
+from typing import Any, Dict, List
 
-def main():
-    repo_name = sys.argv[1]  
-    pr_number = int(sys.argv[2])
+from .config import Settings
 
-    changes, pr = fetch_pr_diff(repo_name, pr_number)
 
-    all_findings = []
-    for file, diff in changes.items():
-        # Run static analyzers
-        lint_results = run_linting(file)
-        all_findings.append(f"### Static Analysis for {file}\n{lint_results}")
+def configure_logging(level: str) -> None:
 
-        # Run LLM review
-        llm_review = review_with_llm(diff)
-        all_findings.append(f"### LLM Review for {file}\n{llm_review}")
+    logging.basicConfig(
+        level=getattr(logging, level, logging.INFO),
+        format="%(asctime)s %(levelname)s %(message)s",
+    )
 
-    # Combine and post
-    final_review = "\n\n".join(all_findings)
-    post_review(pr, final_review)
+
+def save_artifact(filename: str, data: Any) -> None:
+
+    with open(filename, "w", encoding="utf-8") as f:
+        json.dump(data, f, indent=2, ensure_ascii=False)
+
+
+def main() -> int:
+
+    settings = Settings()
+    configure_logging(settings.log_level)
+
+    logging.info("Starting AI PR Review Agent")
+
+    if not settings.repository or not settings.pr_number:
+        logging.error("Missing repository or PR number from environment")
+        return 2
+
+    # Lazy imports to keep startup fast
+    from . import fetch_pr
+    from . import analyzers
+    from . import post_review
+
+    try:
+        changed_files = fetch_pr.get_changed_files(settings)
+    except Exception as exc:  # noqa: BLE001
+        logging.exception("Failed to discover changed files: %s", exc)
+        return 3
+
+    lint_results: Dict[str, Any] = {}
+    if settings.enable_static_analysis:
+        try:
+            lint_results = analyzers.run_static_analyzers(changed_files, settings)
+            save_artifact("lint-results.json", lint_results)
+        except Exception as exc:  # noqa: BLE001
+            logging.exception("Static analysis failed: %s", exc)
+
+    ai_review: Dict[str, Any] = {}
+    if settings.enable_llm_review:
+        try:
+            ai_review = analyzers.run_llm_review(changed_files, settings)
+            save_artifact("review-results.json", ai_review)
+        except Exception as exc:  # noqa: BLE001
+            logging.exception("AI review failed: %s", exc)
+
+    try:
+        post_review.publish_review(
+            changed_files=changed_files,
+            lint_results=lint_results,
+            ai_review=ai_review,
+            settings=settings,
+        )
+    except Exception as exc:  # noqa: BLE001
+        logging.exception("Failed to post review: %s", exc)
+
+    logging.info("AI PR Review Agent complete")
+    return 0
+
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())
+
+
