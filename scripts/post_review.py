@@ -4,7 +4,7 @@ import os
 import sys
 from github import Github
 sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
-from .config import Settings
+from config import Settings
 
 
 def _compose_body(lint_results: Dict[str, Any], ai_review: Dict[str, Any]) -> str:

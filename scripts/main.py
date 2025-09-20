@@ -4,7 +4,7 @@ import os
 import sys
 from typing import Any, Dict, List
 sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
-from .config import Settings
+from config import Settings
 
 
 def configure_logging(level: str) -> None:
